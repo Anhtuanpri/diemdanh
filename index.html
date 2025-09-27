@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Điểm danh 30 ngày • PWA</title>
+
+<!-- PWA manifest + màu thanh hệ thống -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2563eb" />
+
+<!-- iOS (A2HS) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Điểm danh 30 ngày">
+<link rel="apple-touch-icon" href="icon.png">
+
+<style>
+  :root{--ink:#0f172a;--muted:#64748b;--card:#ffffffc9;--border:#e2e8f0;--ok:#22c55e;--pri:#2563eb;--ring:#dbeafe}
+  *{box-sizing:border-box} html,body{height:100%}
+  body{
+    margin:0;color:var(--ink);
+    font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+    /* nền cool */
+    background:
+      radial-gradient(1200px 600px at 80% -10%, #c7d2fe 0%, transparent 60%),
+      radial-gradient(1000px 600px at 10% 110%, #a7f3d0 0%, transparent 55%),
+      linear-gradient(180deg, #e0f2fe 0%, #e8eefc 55%, #f8fafc 100%);
+    /* Safe area cho iPhone */
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+  header{position:sticky;top:0;z-index:5;background:#ffffffbf;backdrop-filter:saturate(180%) blur(10px);border-bottom:1px solid var(--border)}
+  .wrap{max-width:960px;margin:0 auto;padding:12px 16px}
+  h1{margin:0;font-size:18px}
+  .sub{color:var(--muted);font-size:12px;margin-top:4px}
+  nav{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .tab{appearance:none;border:1px solid var(--border);background:#fff;padding:8px 12px;border-radius:999px;cursor:pointer;font-size:14px}
+  .tab.primary{background:var(--pri);border-color:#1d4ed8;color:#fff}
+  main{padding:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(2,6,23,.06)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:900px){.row{grid-template-columns:1fr}}
+  .muted{color:var(--muted)}
+  .sp{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+  .streakBrush{font-family:"Brush Script MT","Kaushan Script","Comic Sans MS",cursive;font-weight:700;font-size:28px;text-shadow:0 2px 6px rgba(2,6,23,.15)}
+  .pbar,.kbar{height:14px;width:100%;background:#eef2ff;border:1px solid var(--ring);border-radius:999px;overflow:hidden}
+  .pfill{height:100%;width:0%;background:linear-gradient(90deg,#34d399,#059669)}
+  .kfill{height:100%;width:0%;background:linear-gradient(90deg,#60a5fa,#2563eb)}
+  .status{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;border:1px solid var(--border);background:#fff}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  @media(max-width:720px){.grid{grid-template-columns:repeat(5,1fr)}}
+  .cell{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;border:1px solid var(--border);background:#fff;border-radius:999px;cursor:pointer;user-select:none;transition:transform .08s,box-shadow .2s,border-color .2s,background-color .25s;overflow:hidden}
+  .cell:hover{box-shadow:0 4px 14px rgba(2,6,23,.08)} .cell:active{transform:scale(.98)}
+  .cell .num,.cell .tick{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;transition:opacity .18s,transform .18s}
+  .cell .num{color:#1f2937} .cell .tick{color:#065f46} .cell:not(.checked) .tick{opacity:0;transform:scale(.8)}
+  .cell.checked .num{opacity:0;transform:scale(1.15)} .cell.checked{background:#eafff0;border-color:#86efac;box-shadow:inset 0 0 0 3px rgba(34,197,94,.14)}
+  .cell.checked .tick{opacity:1;transform:scale(1)}
+  .cell.sel{outline:3px solid #c7d2fe}
+  .cell.flash::after{content:"";position:absolute;inset:-4px;border-radius:999px;pointer-events:none;background:radial-gradient(circle at center,#22c55e40 0%,#22c55e20 40%,transparent 70%);animation:ripple .5s ease-out}
+  @keyframes ripple{from{opacity:1;transform:scale(.9)} to{opacity:0;transform:scale(1.15)}}
+  label{font-size:12px;color:var(--muted)}
+  input{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:14px;background:#fff}
+  .btn{appearance:none;border:1px solid var(--border);background:#fff;border-radius:12px;padding:9px 12px;cursor:pointer;font-size:14px}
+  .btn.primary{background:var(--pri);border-color:#1d4ed8;color:#fff}
+  .wrow{display:grid;grid-template-columns:1fr 120px;gap:8px}
+  #err{display:none;background:#ffe0e0;border:1px solid #ef4444;color:#7f1d1d;padding:8px;border-radius:10px;margin:10px 0;font-size:12px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Điểm danh 30 ngày</h1>
+    <div id="err"></div>
+    <div class="sub" id="subtitle">—</div>
+    <nav>
+      <button class="tab primary" id="tab-main">Chính</button>
+      <button class="tab" id="tab-history">Lịch sử</button>
+      <button class="tab" id="tab-settings">Cài đặt</button>
+      <button class="tab" id="tab-reset" title="Xoá toàn bộ dữ liệu">Reset</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- MAIN -->
+  <section id="page-main">
+    <div class="card">
+      <div class="sp" style="margin-bottom:6px">
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <span style="font-size:20px">🔥</span>
+          <span style="font-weight:700;font-size:18px">Tiến trình</span>
+          <span id="streakBrush" class="streakBrush">0</span>
+        </div>
+        <div id="progressStatus" class="status">Đang theo dõi</div>
+      </div>
+      <div class="sp" style="margin-bottom:6px"><div class="muted" id="progressText">0/30 ngày ✓</div></div>
+      <div class="pbar"><div class="pfill" id="pfill"></div></div>
+      <div class="muted" style="margin-top:6px;font-size:12px">≥ 28 ✓ / 30 ngày → <strong>HOÀN THÀNH</strong>.</div>
+    </div>
+
+    <div class="row" style="margin-top:14px">
+      <div class="card">
+        <h3 style="margin:0 0 8px">Calo hôm nay</h3>
+        <div class="sp" style="margin:6px 0"><span class="muted">Tiến độ</span><span id="kcalText" class="muted">0 / 0 kcal</span></div>
+        <div class="kbar"><div class="kfill" id="kfill"></div></div>
+        <div class="muted" style="margin-top:6px;font-size:12px">Không nhập “Đã ăn” → dùng kcal theo thực đơn <strong>của hôm nay</strong>.</div>
+      </div>
+      <div class="card">
+        <h3 style="margin:0 0 8px">Dự báo cân nặng</h3>
+        <div class="muted" style="font-size:13px;margin-bottom:6px">Thâm hụt TB = mục tiêu − ăn (thâm hụt → giảm).</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+          <div><div class="muted" style="font-size:12px">7 ngày</div><div id="proj7"><strong>—</strong></div></div>
+          <div><div class="muted" style="font-size:12px">14 ngày</div><div id="proj14"><strong>—</strong></div></div>
+          <div><div class="muted" style="font-size:12px">30 ngày</div><div id="proj30"><strong>—</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- THỰC ĐƠN (theo ô đang chọn) -->
+    <div class="card" style="margin-top:14px">
+      <div class="sp" style="margin-bottom:6px">
+        <h3 style="margin:0">Thực đơn (ngày <span id="menuDay">—</span>)</h3>
+        <span class="muted" id="menuHint">Bấm ô lịch để xem thực đơn ngày đó</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center">
+        <div>Sáng: <span id="m-sang">—</span></div><div><strong><span id="k-sang">0</span> kcal</strong></div>
+        <div>Trưa: <span id="m-trua">—</span></div><div><strong><span id="k-trua">0</span> kcal</strong></div>
+        <div>Xế: <span id="m-xe">—</span></div><div><strong><span id="k-xe">0</span> kcal</strong></div>
+        <div>Tối: <span id="m-toi">—</span></div><div><strong><span id="k-toi">0</span> kcal</strong></div>
+      </div>
+      <div class="sp" style="margin-top:10px">
+        <span class="muted">Tổng ngày đã chọn</span>
+        <strong><span id="k-menu-total">0</span> kcal</strong>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="sp" style="margin-bottom:8px"><h3 style="margin:0">Lịch 30 ngày</h3><span class="muted" style="font-size:12px">Bấm để ✓ & xem thực đơn</span></div>
+      <div class="grid" id="grid"></div>
+    </div>
+  </section>
+
+  <!-- HISTORY -->
+  <section id="page-history" style="display:none">
+    <div class="card">
+      <h3 style="margin:0 0 8px">Lịch sử chu kỳ</h3>
+      <div style="overflow:auto">
+        <table style="width:100%;border-collapse:separate;border-spacing:0;border:1px solid var(--border);border-radius:16px;overflow:hidden;background:#fff">
+          <thead style="background:#f1f5f9">
+            <tr>
+              <th style="text-align:left;padding:10px 12px">Bắt đầu</th>
+              <th style="text-align:left;padding:10px 12px">Kết thúc</th>
+              <th style="text-align:left;padding:10px 12px">✓</th>
+              <th style="text-align:left;padding:10px 12px">Trạng thái</th>
+              <th style="text-align:left;padding:10px 12px">Mục tiêu kcal</th>
+              <th style="text-align:left;padding:10px 12px">TB ăn/ngày</th>
+              <th style="text-align:left;padding:10px 12px">Thâm hụt TB</th>
+              <th style="text-align:left;padding:10px 12px">Streak toàn cục</th>
+            </tr>
+          </thead>
+          <tbody id="histBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section id="page-settings" style="display:none">
+    <div class="row">
+      <div class="card">
+        <h3 style="margin:0 0 8px">Thiết lập calo</h3>
+        <label>Mục tiêu (kcal)</label>
+        <input type="number" id="goal" min="800" max="4000" step="50" placeholder="vd 1800"/>
+        <div style="height:8px"></div>
+        <label>Đã ăn hôm nay (kcal) — để trống = theo thực đơn hôm nay</label>
+        <input type="number" id="todayKcal" min="0" max="6000" step="10" placeholder="vd 1600"/>
+        <div class="sp" style="margin-top:10px">
+          <button class="btn primary" id="saveKcal">Lưu</button>
+          <button class="btn" id="clearKcal">Xóa số hôm nay</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 8px">Thông số cơ thể</h3>
+        <label>Cân nặng hiện tại (kg)</label>
+        <input type="number" id="weightNow" min="20" max="300" step="0.1"/>
+        <div style="height:8px"></div>
+        <label>Vòng eo hiện tại (cm)</label>
+        <input type="number" id="waistNow" min="40" max="200" step="0.1"/>
+        <div class="sp" style="margin-top:10px">
+          <button class="btn primary" id="saveBody">Lưu thông số</button>
+          <span class="muted" id="bodySavedAt" style="font-size:12px"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 8px">Mẫu thực đơn 7 ngày (T2→CN)</h3>
+      <div id="weeklyEditor"></div>
+      <div class="sp" style="margin-top:8px">
+        <button class="btn primary" id="saveWeekly">Lưu mẫu</button>
+        <button class="btn" id="resetWeekly">Khôi phục mặc định</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h3 style="margin:0 0 8px">Chu kỳ & dữ liệu</h3>
+      <div class="sp" style="flex-wrap:wrap;gap:8px">
+        <button class="btn" id="endCycle">Kết thúc chu kỳ (lưu lịch sử)</button>
+        <button class="btn" id="newCycle">Chu kỳ mới (từ hôm nay)</button>
+        <button class="btn" id="export">Xuất dữ liệu (.json)</button>
+        <input type="file" id="import" accept="application/json" style="display:none">
+        <button class="btn" id="importBtn">Nhập dữ liệu</button>
+        <button class="btn" id="hardReset">Xoá sạch localStorage</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Modal -->
+<div class="modal" id="modal" style="display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.35);position:fixed;inset:0;z-index:50;padding:16px">
+  <div class="panel" style="background:#fff;border-radius:16px;max-width:520px;width:100%;padding:18px;border:1px solid var(--border);box-shadow:0 20px 70px rgba(2,6,23,.25)">
+    <h3 id="modalTitle" style="margin:0 0 8px">Chúc mừng!</h3>
+    <p id="modalMsg" style="margin:0 0 10px;color:#475569">Bạn đã hoàn thành.</p>
+    <div class="actions" style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button class="btn" id="modalClose">Đóng</button>
+      <button class="btn primary" id="modalAction">Qua tháng mới</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ====== ERROR BOX ======
+  const errBox = document.getElementById('err');
+  window.addEventListener('error', e => { errBox.style.display='block'; errBox.textContent='Lỗi: '+e.message; });
+  window.addEventListener('unhandledrejection', e => { errBox.style.display='block'; errBox.textContent='Lỗi: '+(e.reason?.message||e.reason); });
+
+  // ====== CONSTS & HELPERS ======
+  const LS_KEY="checkin_daily_streak_PWA_v1";
+  const DEFAULT_GOAL=1800, KCAL_PER_KG=7700;
+  const today=new Date(); today.setHours(0,0,0,0);
+  const fmt=d=>d.toISOString().slice(0,10);
+  const addDays=(d,n)=>{const x=new Date(d); x.setDate(x.getDate()+n); x.setHours(0,0,0,0); return x;};
+
+  const DEFAULT_WEEKLY=[
+    {sang:["Khoai lang + sữa không đường",230], trua:["Cơm nhỏ + rau muống + thịt nạc + canh bí",520], xe:["Chuối",90], toi:["Rau luộc + trứng luộc + đậu phụ sốt cà + dưa hấu",330]},
+    {sang:["Ngô luộc + sữa chua không đường",230], trua:["Cơm nhỏ + bắp cải xào + cá kho + canh rau dền",510], xe:["Ổi",70], toi:["Rau cải luộc + 2 trứng chiên ít dầu + đậu phụ rán + bưởi",430]},
+    {sang:["Khoai lang + trứng luộc",200], trua:["Gạo lứt 1/2 + bí đỏ + ức gà + canh mồng tơi",430], xe:["Táo",80], toi:["Rau muống luộc + cá rô kho + đậu phụ luộc + dứa",360]},
+    {sang:["Ngô luộc + sữa không đường",250], trua:["Cơm nhỏ + rau cải xào + thịt nạc kho + canh bí đỏ",550], xe:["Chuối + ít lạc",140], toi:["Rau luộc + trứng luộc + đậu phụ rán + dưa hấu",330]},
+    {sang:["Khoai lang + sữa chua không đường",210], trua:["Cơm nhỏ + rau muống luộc + cá thu kho + canh rau",520], xe:["Ổi",70], toi:["Rau luộc + trứng ốp la ít dầu + đậu phụ sốt cà + bưởi",350]},
+    {sang:["Ngô luộc + trứng luộc",220], trua:["Gạo lứt 1/2 + bắp cải xào + gà luộc xé + canh mồng tơi",470], xe:["Táo",80], toi:["Rau luộc + cá rô kho + đậu phụ hấp + dứa",360]},
+    {sang:["Khoai lang + sữa không đường",230], trua:["Cơm nhỏ + rau muống xào tỏi + thịt nạc kho + canh bí xanh",540], xe:["Chuối",90], toi:["Rau cải luộc + 2 trứng chiên ít dầu + đậu phụ rán + bưởi",420]}
+  ];
+
+  // ====== STATE ======
+  function load(){
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw){
+      const s={startDate:fmt(today), checks:Array(30).fill(false), kcalGoal:DEFAULT_GOAL, kcalByDate:{},
+               weekly:DEFAULT_WEEKLY, body:{weight:null,waist:null,savedAt:null},
+               history:[], globalStreak:0, selectedIdx:0};
+      localStorage.setItem(LS_KEY, JSON.stringify(s)); return s;
+    }
+    let s=JSON.parse(raw);
+    if(!Array.isArray(s.checks)){ const arr=Array(30).fill(false); if(s.checks&&typeof s.checks==="object"){ Object.keys(s.checks).forEach(k=>{ const i=+k; if(i>=0&&i<30&&s.checks[k]) arr[i]=true; }); } s.checks=arr; }
+    if(s.checks.length!==30) s.checks=(s.checks.concat(Array(30).fill(false))).slice(0,30);
+    if(!s.weekly) s.weekly=DEFAULT_WEEKLY;
+    if(!s.history) s.history=[];
+    if(typeof s.globalStreak!=="number") s.globalStreak=0;
+    if(typeof s.selectedIdx!=="number") s.selectedIdx=0;
+    return s;
+  }
+  let state=load();
+  const save=s=>localStorage.setItem(LS_KEY, JSON.stringify(s));
+  const checks=()=>state.checks;
+  const countDone=()=>checks().filter(Boolean).length;
+  const cycleDates=()=>{const s=new Date(state.startDate); s.setHours(0,0,0,0); return {start:s,end:addDays(s,29)};};
+  const todayIdxInCycle=()=>{ const {start}=cycleDates(); return Math.max(0, Math.min(29, Math.floor((today - start)/86400000))); };
+
+  // Init selected day = hôm nay
+  state.selectedIdx = todayIdxInCycle(); save(state);
+
+  // ====== TABS ======
+  const pageMain=document.getElementById('page-main');
+  const pageHist=document.getElementById('page-history');
+  const pageSet =document.getElementById('page-settings');
+  const tabMain=document.getElementById('tab-main');
+  const tabHist=document.getElementById('tab-history');
+  const tabSet =document.getElementById('tab-settings');
+  const tabReset=document.getElementById('tab-reset');
+  function setTab(n){
+    pageMain.style.display=(n==="main")?"block":"none";
+    pageHist.style.display=(n==="history")?"block":"none";
+    pageSet .style.display=(n==="settings")?"block":"none";
+    [tabMain,tabHist,tabSet,tabReset].forEach(b=>b.classList.remove("primary"));
+    (n==="main"?tabMain:n==="history"?tabHist:n==="settings"?tabSet:tabReset).classList.add("primary");
+    if(n==="history") renderHistory();
+    if(n==="settings") renderWeeklyEditor();
+  }
+  tabMain.onclick=()=>setTab("main");
+  tabHist.onclick=()=>setTab("history");
+  tabSet .onclick=()=>setTab("settings");
+  tabReset.onclick=()=>{ if(confirm("Xoá toàn bộ dữ liệu & khởi tạo mới?")){ localStorage.removeItem(LS_KEY); state=load(); state.selectedIdx=todayIdxInCycle(); save(state); renderAll(); alert("Đã reset."); setTab("main"); } };
+
+  // ====== HEADER/PROGRESS ======
+  const subtitle=document.getElementById('subtitle'), pfill=document.getElementById('pfill');
+  const progressText=document.getElementById('progressText'), progressStatus=document.getElementById('progressStatus');
+  const streakBrush=document.getElementById('streakBrush');
+  function renderHeader(){
+    const {start,end}=cycleDates();
+    const done=countDone();
+    const totalPastOrToday=Math.min(30, Math.max(1, Math.floor((today - start)/86400000)+1));
+    const pct=Math.round((done/Math.max(1,totalPastOrToday))*100);
+    subtitle.innerHTML=`Bắt đầu: ${fmt(start)} • Kết thúc: ${fmt(end)} • Hoàn thành: <b>${pct}%</b> • Streak toàn cục: <b id="streakNum">${state.globalStreak}</b>`;
+    streakBrush.textContent = Math.min(99999, Math.max(0, state.globalStreak));
+  }
+  function renderProgress(){
+    const done=countDone();
+    progressText.textContent=`${done}/30 ngày ✓`;
+    pfill.style.width=Math.min(100, Math.round(done/30*100))+"%";
+    const {end}=cycleDates();
+    progressStatus.textContent = (done>=28) ? "Rất tốt" : (today>=end ? "Kết thúc chu kỳ" : "Đang theo dõi");
+  }
+
+  // ====== GRID ======
+  const grid=document.getElementById('grid');
+  function renderGrid(){
+    grid.innerHTML="";
+    const sel=state.selectedIdx;
+    for(let i=0;i<30;i++){
+      const c=document.createElement('div'); c.className="cell"+(checks()[i]?" checked":"")+(i===sel?" sel":"");
+      const num=document.createElement('div'); num.className="num"; num.textContent=(i+1);
+      const tick=document.createElement('div'); tick.className="tick"; tick.textContent="✓";
+      c.append(num,tick);
+      c.onclick=()=>onToggleDay(i,c);
+      grid.appendChild(c);
+    }
+  }
+
+  // ====== MENU: 1→menu1, 2→menu2, ... xoay mỗi 7 ======
+  function weeklyIndexForDayIndex(dayIndex){ return ((dayIndex%7)+7)%7; }
+  function menuForDayIndex(dayIndex){
+    const b = state.weekly[ weeklyIndexForDayIndex(dayIndex) ];
+    return {sang:[b.sang[0],+b.sang[1]], trua:[b.trua[0],+b.trua[1]], xe:[b.xe[0],+b.xe[1]], toi:[b.toi[0],+b.toi[1]]};
+  }
+  // Panel thực đơn theo ô chọn
+  const menuDay=document.getElementById('menuDay'), menuHint=document.getElementById('menuHint');
+  const mS=document.getElementById('m-sang'),mT=document.getElementById('m-trua'),mX=document.getElementById('m-xe'),mToi=document.getElementById('m-toi');
+  const kS=document.getElementById('k-sang'),kT=document.getElementById('k-trua'),kX=document.getElementById('k-xe'),kToi=document.getElementById('k-toi'),kTotal=document.getElementById('k-menu-total');
+  function renderMenuPanel(){
+    const idx=state.selectedIdx;
+    menuDay.textContent = (idx+1);
+    const m=menuForDayIndex(idx);
+    mS.textContent=m.sang[0]; kS.textContent=m.sang[1];
+    mT.textContent=m.trua[0]; kT.textContent=m.trua[1];
+    mX.textContent=m.xe[0];   kX.textContent=m.xe[1];
+    mToi.textContent=m.toi[0];kToi.textContent=m.toi[1];
+    kTotal.textContent=m.sang[1]+m.trua[1]+m.xe[1]+m.toi[1];
+    menuHint.textContent = (idx===todayIdxInCycle()) ? "Đang xem thực đơn của HÔM NAY" : "Đang xem thực đơn theo ô đã chọn";
+  }
+
+  // KCAL hôm nay
+  const kcalText=document.getElementById('kcalText'), kfill=document.getElementById('kfill');
+  function todaysMenuCalories(){ const m=menuForDayIndex(todayIdxInCycle()); return m.sang[1]+m.trua[1]+m.xe[1]+m.toi[1]; }
+  function eatenToday(){ const key=fmt(today); return (state.kcalByDate[key]!=null)?Number(state.kcalByDate[key]):todaysMenuCalories(); }
+  function renderKcal(){
+    const goal=Number(state.kcalGoal||DEFAULT_GOAL), eaten=eatenToday();
+    kcalText.textContent=`${eaten} / ${goal} kcal`;
+    kfill.style.width=Math.min(100, Math.round((eaten/goal)*100))+"%";
+  }
+
+  // ====== Toggle ngày (✓ từ off→on là +1 streak) ======
+  function onToggleDay(i, cellEl){
+    state.selectedIdx = i; save(state); // chọn ô để xem menu
+
+    const before = !!state.checks[i];
+    state.checks[i] = !before; 
+    save(state);
+
+    if(state.checks[i]){
+      cellEl.classList.add("checked","flash");
+      setTimeout(()=>cellEl.classList.remove("flash"), 500);
+      state.globalStreak += 1; // +1 mỗi lần ✓
+      save(state);
+    }else{
+      cellEl.classList.remove("checked");
+      // không trừ streak
+    }
+
+    renderAll();
+    checkFullOrEnd();
+  }
+
+  // ====== Body & Projections (giản lược) ======
+  const weightNowEl=document.getElementById('weightNow'), waistNowEl=document.getElementById('waistNow'), bodySavedAtEl=document.getElementById('bodySavedAt');
+  function renderBody(){ weightNowEl.value=state.body?.weight??""; waistNowEl.value=state.body?.waist??""; bodySavedAtEl.textContent=state.body?.savedAt?("Lưu lúc "+state.body.savedAt):""; }
+  function avgEatenSoFar(){
+    const {start}=cycleDates();
+    const days=Math.min(30, Math.max(1, Math.floor((today - start)/86400000)+1));
+    let s=0; for(let i=0;i<days;i++){
+      const d=addDays(start,i);
+      const key=fmt(d);
+      if(state.kcalByDate[key]!=null) s+=Number(state.kcalByDate[key]);
+      else { const m=menuForDayIndex(i); s+= m.sang[1]+m.trua[1]+m.xe[1]+m.toi[1]; }
+    }
+    return s/days;
+  }
+  const proj7=document.getElementById('proj7'),proj14=document.getElementById('proj14'),proj30=document.getElementById('proj30');
+  function renderProjections(){
+    const w0=state.body?.weight??null; if(!w0){ proj7.textContent="Cập nhật cân nặng"; proj14.textContent=""; proj30.textContent=""; return; }
+    const goal=Number(state.kcalGoal||DEFAULT_GOAL), avgEat=avgEatenSoFar(), avgDef=goal-avgEat; // >0 thâm hụt
+    const deltaPerDay = -avgDef / KCAL_PER_KG;
+    const mk=(d)=>{ const w=(w0 + deltaPerDay*d); const tag=(avgDef>=0?"thâm hụt":"thặng dư"); return `${w.toFixed(1)} kg • ${tag} ~ ${Math.round(Math.abs(avgDef))} kcal/ngày`; };
+    proj7.textContent=mk(7); proj14.textContent=mk(14); proj30.textContent=mk(30);
+  }
+
+  // ====== Weekly Editor ======
+  const weeklyEditor=document.getElementById('weeklyEditor');
+  function renderWeeklyEditor(){
+    weeklyEditor.innerHTML="";
+    const label = ["Thứ 2","Thứ 3","Thứ 4","Thứ 5","Thứ 6","Thứ 7","Chủ nhật"];
+    state.weekly.forEach((d,i)=>{
+      const box=document.createElement('div'); box.className="card"; box.style.marginTop="8px";
+      box.innerHTML=`
+        <strong>${label[i]} (mẫu ${i+1})</strong>
+        <div style="margin-top:6px">Sáng</div>
+        <div class="wrow"><input id="ws-text-${i}" value="${d.sang[0]}"/><input id="ws-k-${i}" type="number" min="0" step="10" value="${d.sang[1]}"/></div>
+        <div style="margin-top:6px">Trưa</div>
+        <div class="wrow"><input id="wt-text-${i}" value="${d.trua[0]}"/><input id="wt-k-${i}" type="number" min="0" step="10" value="${d.trua[1]}"/></div>
+        <div style="margin-top:6px">Xế</div>
+        <div class="wrow"><input id="wx-text-${i}" value="${d.xe[0]}"/><input id="wx-k-${i}" type="number" min="0" step="10" value="${d.xe[1]}"/></div>
+        <div style="margin-top:6px">Tối</div>
+        <div class="wrow"><input id="wo-text-${i}" value="${d.toi[0]}"/><input id="wo-k-${i}" type="number" min="0" step="10" value="${d.toi[1]}"/></div>
+      `;
+      weeklyEditor.appendChild(box);
+    });
+  }
+  document.getElementById('saveWeekly').onclick=()=>{
+    const nw=[];
+    for(let i=0;i<7;i++){
+      nw.push({
+        sang:[ document.getElementById(`ws-text-${i}`).value || DEFAULT_WEEKLY[i].sang[0], Number(document.getElementById(`ws-k-${i}`).value || DEFAULT_WEEKLY[i].sang[1]) ],
+        trua:[ document.getElementById(`wt-text-${i}`).value || DEFAULT_WEEKLY[i].trua[0], Number(document.getElementById(`wt-k-${i}`).value || DEFAULT_WEEKLY[i].trua[1]) ],
+        xe:[ document.getElementById(`wx-text-${i}`).value || DEFAULT_WEEKLY[i].xe[0], Number(document.getElementById(`wx-k-${i}`).value || DEFAULT_WEEKLY[i].xe[1]) ],
+        toi:[ document.getElementById(`wo-text-${i}`).value || DEFAULT_WEEKLY[i].toi[0], Number(document.getElementById(`wo-k-${i}`).value || DEFAULT_WEEKLY[i].toi[1]) ],
+      });
+    }
+    state.weekly=nw; save(state);
+    alert("Đã lưu mẫu thực đơn.");
+    renderMenuPanel(); renderKcal(); renderProjections();
+  };
+  document.getElementById('resetWeekly').onclick=()=>{ state.weekly=JSON.parse(JSON.stringify(DEFAULT_WEEKLY)); save(state); renderWeeklyEditor(); alert("Đã khôi phục mặc định."); renderMenuPanel(); renderKcal(); renderProjections(); };
+
+  // ====== HISTORY ======
+  const histBody=document.getElementById('histBody');
+  function buildCycleSummary(status){
+    const {start,end}=cycleDates();
+    let sum=0; for(let i=0;i<30;i++){ const m=menuForDayIndex(i); sum += m.sang[1]+m.trua[1]+m.xe[1]+m.toi[1]; }
+    const avgEat=Math.round(sum/30); const goal=Number(state.kcalGoal||DEFAULT_GOAL); const avgDef=goal-avgEat;
+    return {startDate:fmt(start), endDate:fmt(end), completed:countDone(), status, kcalGoal:goal, avgEat, avgDef, globalStreakAtSave:state.globalStreak};
+  }
+  function pushHistory(status){ state.history.unshift(buildCycleSummary(status)); save(state); }
+  function renderHistory(){
+    histBody.innerHTML="";
+    if(!state.history.length){ const tr=document.createElement('tr'); const td=document.createElement('td'); td.colSpan=9; td.textContent="Chưa có dữ liệu."; tr.appendChild(td); histBody.appendChild(tr); return; }
+    state.history.forEach(h=>{
+      const tr=document.createElement('tr');
+      [h.startDate,h.endDate,h.completed,h.status,h.kcalGoal,h.avgEat,h.avgDef,h.globalStreakAtSave]
+        .forEach(v=>{ const td=document.createElement('td'); td.style.padding="10px 12px"; td.textContent=String(v); tr.appendChild(td); });
+      histBody.appendChild(tr);
+    });
+  }
+
+  // ====== MODAL & CYCLE ======
+  const modal=document.getElementById('modal'), modalTitle=document.getElementById('modalTitle'), modalMsg=document.getElementById('modalMsg'), modalClose=document.getElementById('modalClose'), modalAction=document.getElementById('modalAction');
+  function showModal(title,msg,actionText,actionFn){
+    modalTitle.textContent=title; modalMsg.textContent=msg; modalAction.textContent=actionText; modal.style.display='flex';
+    const close=()=>{ modal.style.display='none'; modalClose.onclick=null; modalAction.onclick=null; };
+    modalClose.onclick=close; modalAction.onclick=()=>{ actionFn?.(); close(); };
+  }
+  function newCycle(){
+    state.startDate=fmt(today);
+    state.checks=Array(30).fill(false);
+    // KHÔNG reset streak
+    save(state); renderAll();
+  }
+  function checkFullOrEnd(){
+    const done=countDone(); const {end}=cycleDates();
+    if(done===30){ pushHistory("Hoàn thành"); showModal("🎉 Tuyệt vời!","Bạn đã ✓ đủ 30/30.","Qua tháng mới", newCycle); return; }
+    if(today>=end){
+      if(done>=28){ pushHistory("Hoàn thành"); showModal("🎉 Hoàn thành!",`Bạn đạt ${done}/30.`,"Bắt đầu tháng mới", newCycle); }
+      else{ pushHistory("Thất bại"); showModal("⚑ Chưa đạt",`Bạn đạt ${done}/30. Đừng nản — thử lại nhé!`,"Bắt đầu lại", newCycle); }
+      renderHistory();
+    }
+  }
+
+  // ====== SETTINGS EVENTS ======
+  const goalEl=document.getElementById('goal'), todayKcalEl=document.getElementById('todayKcal'), hardReset=document.getElementById('hardReset');
+  document.getElementById('saveKcal').onclick=()=>{
+    state.kcalGoal=Number(goalEl.value||DEFAULT_GOAL);
+    const k=todayKcalEl.value?Number(todayKcalEl.value):undefined;
+    if(k!=null) state.kcalByDate[fmt(today)]=k; else delete state.kcalByDate[fmt(today)];
+    save(state); renderKcal(); renderProjections();
+  };
+  document.getElementById('clearKcal').onclick=()=>{ delete state.kcalByDate[fmt(today)]; todayKcalEl.value=""; save(state); renderKcal(); renderProjections(); };
+  document.getElementById('saveBody').onclick=()=>{ state.body={weight:weightNowEl.value?Number(weightNowEl.value):null, waist:waistNowEl.value?Number(waistNowEl.value):null, savedAt:new Date().toLocaleString()}; save(state); renderBody(); renderProjections(); };
+  hardReset.onclick=()=>{ if(confirm("Xoá sạch toàn bộ dữ liệu ứng dụng?")){ localStorage.removeItem(LS_KEY); location.reload(); } };
+
+  // ====== EXPORT/IMPORT ======
+  document.getElementById('endCycle').onclick=()=>{ const done=countDone(); pushHistory(done>=28?"Hoàn thành":"Thất bại"); renderHistory(); showModal("Đã lưu lịch sử","Chu kỳ hiện tại đã lưu.","Đóng",()=>{}); };
+  document.getElementById('newCycle').onclick=()=>{ if(confirm("Bắt đầu chu kỳ mới từ hôm nay? (Streak giữ nguyên)")) newCycle(); };
+  document.getElementById('export').onclick=()=>{ const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download='checkin_data.json'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000); };
+  const importEl=document.getElementById('import'); document.getElementById('importBtn').onclick=()=>importEl.click();
+  importEl.onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=()=>{ try{
+      const data=JSON.parse(r.result); if(!data.startDate) throw new Error("Thiếu startDate");
+      if(!Array.isArray(data.checks)){ const arr=Array(30).fill(false); if(data.checks && typeof data.checks==="object"){ Object.keys(data.checks).forEach(k=>{ const i=+k; if(i>=0&&i<30&&data.checks[k]) arr[i]=true; }); } data.checks=arr; }
+      else if(data.checks.length!==30){ data.checks=(data.checks.concat(Array(30).fill(false))).slice(0,30); }
+      state=data; if(typeof state.globalStreak!=="number") state.globalStreak=0; if(typeof state.selectedIdx!=="number") state.selectedIdx=todayIdxInCycle();
+      save(state); renderAll(); alert("Đã nhập dữ liệu.");
+    }catch(err){ alert("File không hợp lệ: "+err.message); } }; r.readAsText(f); };
+
+  // ====== PWA: Đăng ký service worker ======
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(console.error);
+    });
+  }
+
+  // ====== RENDER ======
+  function renderAll(){ renderHeader(); renderGrid(); renderMenuPanel(); renderKcal(); renderProgress(); renderBody(); renderProjections(); }
+  renderAll();
+})();
+</script>
+</body>
+</html>
