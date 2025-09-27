@@ -1,0 +1,18 @@
+{
+  "name": "Điểm danh 30 ngày",
+  "short_name": "Điểm danh",
+  "description": "Lịch 30 ngày, streak và thực đơn luân phiên.",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    { "src": "icon.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Mở lịch", "short_name": "Lịch", "url": "index.html#lich" },
+    { "name": "Cài đặt", "short_name": "Cài đặt", "url": "index.html#settings" }
+  ]
+}
